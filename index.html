@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TikTok Sorter</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #111; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    height: 100vh; overflow: hidden; display: flex;
+  }
+
+  /* Left sidebar - folder buttons */
+  .sidebar {
+    width: 200px; min-width: 200px; background: #1a1a1a; display: flex; flex-direction: column;
+    padding: 12px; gap: 8px; overflow-y: auto;
+  }
+  .sidebar h2 { font-size: 14px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .folder-btn {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 14px; background: #2a2a2a; border: 2px solid transparent;
+    border-radius: 10px; color: #fff; font-size: 15px; cursor: pointer;
+    transition: all 0.15s; user-select: none;
+  }
+  .folder-btn:hover { background: #3a3a3a; transform: scale(1.02); }
+  .folder-btn:active { transform: scale(0.97); }
+  .folder-btn .count { color: #888; font-size: 13px; font-weight: 600; }
+  .folder-btn .key { color: #555; font-size: 11px; margin-right: 6px; font-family: monospace; }
+  .folder-btn.predicted { border-color: #4a9eff; box-shadow: 0 0 12px rgba(74, 158, 255, 0.25); }
+  .folder-btn.predicted-low { border-color: #f5a623; box-shadow: 0 0 8px rgba(245, 166, 35, 0.15); }
+  .folder-btn.just-sorted { animation: sortFlash 0.4s ease; }
+  @keyframes sortFlash {
+    0% { background: #2d7d2d; } 100% { background: #2a2a2a; }
+  }
+
+  /* Center - video player */
+  .player {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; position: relative; background: #000; min-width: 0;
+  }
+  .video-container {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    width: 100%; position: relative; overflow: hidden;
+  }
+  .video-container video {
+    max-height: 100%; max-width: 100%; object-fit: contain;
+  }
+  .player-controls {
+    display: flex; gap: 12px; padding: 12px; align-items: center;
+  }
+  .ctrl-btn {
+    padding: 8px 20px; background: #2a2a2a; border: none; border-radius: 8px;
+    color: #fff; font-size: 14px; cursor: pointer; transition: background 0.15s;
+  }
+  .ctrl-btn:hover { background: #444; }
+  .ctrl-btn.skip { background: #3a3a3a; font-weight: 600; }
+
+  /* Right panel - predictions */
+  .predictions {
+    width: 220px; min-width: 220px; background: #1a1a1a; padding: 16px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .predictions h2 { font-size: 14px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+  .pred-item {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .pred-item .pred-name { width: 80px; font-size: 14px; white-space: nowrap; }
+  .pred-item .pred-bar-bg {
+    flex: 1; height: 22px; background: #2a2a2a; border-radius: 4px; overflow: hidden;
+  }
+  .pred-item .pred-bar {
+    height: 100%; border-radius: 4px; display: flex; align-items: center;
+    padding-left: 6px; font-size: 12px; font-weight: 600; min-width: 30px;
+    transition: width 0.3s;
+  }
+  .pred-item:first-child .pred-bar { background: #4a9eff; }
+  .pred-item:nth-child(2) .pred-bar { background: #3a7acc; }
+  .pred-item:nth-child(3) .pred-bar { background: #2a5a99; }
+
+  .progress-section {
+    margin-top: auto; padding-top: 16px; border-top: 1px solid #333;
+  }
+  .progress-section .label { font-size: 13px; color: #888; margin-bottom: 6px; }
+  .progress-section .numbers { font-size: 28px; font-weight: 700; }
+  .progress-bar-bg {
+    width: 100%; height: 6px; background: #2a2a2a; border-radius: 3px; margin-top: 8px; overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%; background: #4a9eff; border-radius: 3px; transition: width 0.3s;
+  }
+  .video-name {
+    font-size: 11px; color: #555; word-break: break-all; margin-top: 8px;
+  }
+
+  /* Done overlay */
+  .done-overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.9);
+    display: none; align-items: center; justify-content: center;
+    flex-direction: column; gap: 16px; z-index: 10;
+  }
+  .done-overlay.visible { display: flex; }
+  .done-overlay h1 { font-size: 36px; }
+  .done-overlay p { font-size: 18px; color: #888; }
+
+  /* Toast notification */
+  .toast {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    background: #2d7d2d; color: #fff; padding: 10px 24px; border-radius: 8px;
+    font-size: 14px; font-weight: 600; opacity: 0; transition: opacity 0.3s;
+    pointer-events: none; z-index: 100;
+  }
+  .toast.visible { opacity: 1; }
+
+  /* Keyboard hints */
+  .kb-hints {
+    font-size: 11px; color: #555; padding: 8px 0; line-height: 1.8;
+  }
+
+  /* Retrain button */
+  .retrain-btn {
+    padding: 10px 14px; background: #1e3a5f; border: 1px solid #2a5a99; border-radius: 8px;
+    color: #7ab8ff; font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: all 0.15s; width: 100%; text-align: center;
+  }
+  .retrain-btn:hover { background: #254a73; }
+  .retrain-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .retrain-btn.running {
+    animation: retrainPulse 1.5s infinite;
+  }
+  @keyframes retrainPulse {
+    0%, 100% { border-color: #2a5a99; } 50% { border-color: #4a9eff; box-shadow: 0 0 8px rgba(74,158,255,0.3); }
+  }
+  .retrain-status { font-size: 11px; color: #666; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<div class="sidebar" id="sidebar">
+  <h2>Sort Into</h2>
+  <!-- Folder buttons injected by JS -->
+</div>
+
+<div class="player">
+  <div class="video-container">
+    <video id="videoA" autoplay loop playsinline muted></video>
+    <video id="videoB" style="display:none" preload="auto" loop playsinline muted></video>
+    <div class="done-overlay" id="doneOverlay">
+      <h1>All Done!</h1>
+      <p>No more unsorted videos</p>
+    </div>
+  </div>
+  <div class="player-controls">
+    <button class="ctrl-btn" onclick="goPrev()">&larr; Prev</button>
+    <button class="ctrl-btn" id="muteBtn" onclick="toggleMute()">Unmute</button>
+    <button class="ctrl-btn skip" onclick="skip()">Skip &rarr;</button>
+  </div>
+</div>
+
+<div class="predictions">
+  <h2>ML Prediction</h2>
+  <div id="predList"></div>
+
+  <div class="progress-section">
+    <div class="label">Sorted</div>
+    <div class="numbers"><span id="sortedCount">0</span> <span style="color:#555;font-size:16px">/ <span id="totalCount">0</span></span></div>
+    <div class="progress-bar-bg"><div class="progress-bar" id="progressBar"></div></div>
+    <div class="video-name" id="videoName"></div>
+  </div>
+
+  <div style="padding-top:8px; border-top: 1px solid #333;">
+    <button class="retrain-btn" id="retrainBtn" onclick="startRetrain()">Retrain Model</button>
+    <div class="retrain-status" id="retrainStatus"></div>
+  </div>
+
+  <div class="kb-hints">
+    <b>Keys:</b> 1-9 sort to folder<br>
+    &larr; prev &middot; &rarr; skip &middot; space pause<br>
+    M unmute/mute &middot; R retrain
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let queue = [];
+let currentIndex = 0;
+let sortedCount = 0;
+let initialTotal = 0;
+let folders = [];
+let activeVideo = document.getElementById('videoA');
+let bufferVideo = document.getElementById('videoB');
+let isMuted = true;
+
+async function init() {
+  const [videosRes, foldersRes] = await Promise.all([
+    fetch('/api/videos').then(r => r.json()),
+    fetch('/api/folders').then(r => r.json()),
+  ]);
+  queue = videosRes.videos;
+  initialTotal = videosRes.total;
+  folders = foldersRes.folders;
+  document.getElementById('totalCount').textContent = initialTotal;
+  renderFolders();
+  loadCurrent();
+}
+
+function renderFolders() {
+  const sidebar = document.getElementById('sidebar');
+  // Keep the h2
+  sidebar.innerHTML = '<h2>Sort Into</h2>';
+  folders.forEach((f, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'folder-btn';
+    btn.dataset.folder = f.name;
+    btn.innerHTML = `<span><span class="key">${i + 1}</span>${f.name}</span><span class="count">${f.count}</span>`;
+    btn.onclick = () => sortVideo(f.name);
+    sidebar.appendChild(btn);
+  });
+}
+
+function updateFolderCounts(newFolders) {
+  folders = newFolders;
+  const buttons = document.querySelectorAll('.folder-btn');
+  buttons.forEach(btn => {
+    const f = folders.find(f => f.name === btn.dataset.folder);
+    if (f) btn.querySelector('.count').textContent = f.count;
+  });
+}
+
+function highlightPredicted(predictedFolder, confidence) {
+  document.querySelectorAll('.folder-btn').forEach(btn => {
+    btn.classList.remove('predicted', 'predicted-low');
+    if (btn.dataset.folder === predictedFolder) {
+      btn.classList.add(confidence > 0.3 ? 'predicted' : 'predicted-low');
+    }
+  });
+}
+
+function loadCurrent() {
+  if (currentIndex >= queue.length) {
+    activeVideo.pause();
+    activeVideo.removeAttribute('src');
+    document.getElementById('doneOverlay').classList.add('visible');
+    document.getElementById('predList').innerHTML = '';
+    document.getElementById('videoName').textContent = '';
+    highlightPredicted(null, 0);
+    return;
+  }
+
+  document.getElementById('doneOverlay').classList.remove('visible');
+  const video = queue[currentIndex];
+
+  activeVideo.src = '/videos/' + video.filename;
+  activeVideo.muted = isMuted;
+  activeVideo.play().catch(() => {});
+
+  // Preload next
+  if (currentIndex + 1 < queue.length) {
+    bufferVideo.src = '/videos/' + queue[currentIndex + 1].filename;
+    bufferVideo.load();
+  }
+
+  // Update prediction panel
+  renderPredictions(video);
+  highlightPredicted(video.predicted_folder, video.confidence);
+
+  // Update video name
+  document.getElementById('videoName').textContent = video.filename;
+  updateProgress();
+}
+
+function renderPredictions(video) {
+  const container = document.getElementById('predList');
+  if (!video.top_predictions || video.top_predictions.length === 0) {
+    container.innerHTML = '<div style="color:#555;font-size:13px">No prediction available</div>';
+    return;
+  }
+  container.innerHTML = video.top_predictions.map(p => `
+    <div class="pred-item">
+      <span class="pred-name">${p.folder}</span>
+      <div class="pred-bar-bg">
+        <div class="pred-bar" style="width:${Math.max(p.confidence * 100, 8)}%">${Math.round(p.confidence * 100)}%</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateProgress() {
+  document.getElementById('sortedCount').textContent = sortedCount;
+  const pct = initialTotal > 0 ? (sortedCount / initialTotal * 100) : 0;
+  document.getElementById('progressBar').style.width = pct + '%';
+}
+
+async function sortVideo(folderName) {
+  if (currentIndex >= queue.length) return;
+  const video = queue[currentIndex];
+
+  // Optimistic UI - flash the button
+  const btn = document.querySelector(`.folder-btn[data-folder="${folderName}"]`);
+  if (btn) { btn.classList.add('just-sorted'); setTimeout(() => btn.classList.remove('just-sorted'), 400); }
+
+  try {
+    const res = await fetch('/api/sort', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename: video.filename, folder: folderName }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      showToast('Error: ' + (data.detail || 'Sort failed'), true);
+      // Remove from queue anyway (probably already moved)
+      queue.splice(currentIndex, 1);
+      if (currentIndex >= queue.length) currentIndex = Math.max(0, queue.length - 1);
+      loadCurrent();
+      return;
+    }
+
+    sortedCount++;
+    updateFolderCounts(data.folders);
+    queue.splice(currentIndex, 1);
+    if (currentIndex >= queue.length) currentIndex = Math.max(0, queue.length - 1);
+    showToast(`${video.filename.slice(0, 12)}... → ${folderName}`);
+    loadCurrent();
+  } catch (e) {
+    showToast('Network error', true);
+  }
+}
+
+function skip() {
+  if (queue.length === 0) return;
+  // Move current to end of queue
+  const skipped = queue.splice(currentIndex, 1)[0];
+  queue.push(skipped);
+  if (currentIndex >= queue.length) currentIndex = 0;
+  loadCurrent();
+}
+
+function goPrev() {
+  if (queue.length === 0) return;
+  currentIndex = (currentIndex - 1 + queue.length) % queue.length;
+  loadCurrent();
+}
+
+function toggleMute() {
+  isMuted = !isMuted;
+  activeVideo.muted = isMuted;
+  document.getElementById('muteBtn').textContent = isMuted ? 'Unmute' : 'Mute';
+}
+
+function showToast(msg, isError) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.style.background = isError ? '#7d2d2d' : '#2d7d2d';
+  toast.classList.add('visible');
+  setTimeout(() => toast.classList.remove('visible'), 1500);
+}
+
+// Retrain
+async function startRetrain() {
+  const btn = document.getElementById('retrainBtn');
+  const status = document.getElementById('retrainStatus');
+  btn.disabled = true;
+  btn.classList.add('running');
+  btn.textContent = 'Retraining...';
+  status.textContent = 'Running extract → train → predict pipeline...';
+
+  try {
+    const res = await fetch('/api/retrain', { method: 'POST' });
+    const data = await res.json();
+    if (data.status === 'already_running') {
+      status.textContent = 'Already running, please wait...';
+    }
+    // Poll for completion
+    pollRetrain();
+  } catch (e) {
+    status.textContent = 'Failed to start retrain';
+    btn.disabled = false;
+    btn.classList.remove('running');
+    btn.textContent = 'Retrain Model';
+  }
+}
+
+async function pollRetrain() {
+  const btn = document.getElementById('retrainBtn');
+  const status = document.getElementById('retrainStatus');
+  try {
+    const res = await fetch('/api/retrain/status');
+    const data = await res.json();
+    if (data.running) {
+      status.textContent = 'Running extract → train → predict pipeline...';
+      setTimeout(pollRetrain, 3000);
+    } else {
+      btn.disabled = false;
+      btn.classList.remove('running');
+      btn.textContent = 'Retrain Model';
+      if (data.last_result === 'success') {
+        status.textContent = 'Done! Predictions updated.';
+        showToast('Model retrained! Refreshing predictions...');
+        // Reload video predictions
+        const videosRes = await fetch('/api/videos').then(r => r.json());
+        // Update predictions for videos still in queue
+        const predMap = {};
+        videosRes.videos.forEach(v => { predMap[v.filename] = v; });
+        queue.forEach((v, i) => {
+          if (predMap[v.filename]) {
+            queue[i] = predMap[v.filename];
+          }
+        });
+        loadCurrent();
+      } else if (data.last_result) {
+        status.textContent = 'Error: ' + data.last_result.slice(0, 100);
+        showToast('Retrain failed', true);
+      }
+    }
+  } catch (e) {
+    setTimeout(pollRetrain, 5000);
+  }
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+  // Number keys 1-9 for folder sorting
+  const num = parseInt(e.key);
+  if (num >= 1 && num <= folders.length) {
+    e.preventDefault();
+    sortVideo(folders[num - 1].name);
+    return;
+  }
+
+  switch (e.key) {
+    case 'ArrowRight':
+      e.preventDefault();
+      skip();
+      break;
+    case 'ArrowLeft':
+      e.preventDefault();
+      goPrev();
+      break;
+    case ' ':
+      e.preventDefault();
+      activeVideo.paused ? activeVideo.play() : activeVideo.pause();
+      break;
+    case 'm':
+    case 'M':
+      toggleMute();
+      break;
+    case 'r':
+    case 'R':
+      if (!document.getElementById('retrainBtn').disabled) startRetrain();
+      break;
+  }
+});
+
+init();
+</script>
+</body>
+</html>

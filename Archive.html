@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Local Archive - myfaveTT</title>
+		<link
+			rel="icon"
+			href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAADSElEQVRYhe2XXWscVRjHf2fOvOxsN7slyzYYsY0IVtRclX4DL0pJEYt4p2hBQfwE4pVe+wH0wlKRelOQ3gpSKSgUrVq3idXSJrEbpdmk7luym9l5OXJmdmvSySzedLcX/cOzzJ7zf87zf57znDMMjyGE0DXQP2eAq0APUA/JeoMYOpbI5XIMg597iEGz7NwgNq9nEMZhb+gtuDxBAZcxTbO+z8S4rG4EQZCb1EmUUubM3QMH33sX6/AcYb8XyxMplwTCsgk26nS/uUTh5VMYrksUBMlcip3AcFx2lhbZ+vyL+2OmmYRvD8v97L11Na+UmlJKFUZYSSnlhD3F22+qilLqmRHcoZWVUvz6456tdRynvacCG60WR6cP8SWg9yXqb0HgJ3np+8Itxs86y6jxD+GBWaoEXMHkk3jVENXtDFZT4Dgg80kFgGAnxJ8+xllvjYvb60kVdgvYunYNlGRBl1MHnJkGx04WixSsrIDnw4E81P6GsEB58Qa3XYuXfAF5B2bKoBQIA9rbsF4DaSTiaw2ovMDSve7+AvzTr7GsH+ZOQS4PFz6AF+f1DMrbhjMfIqqr8ORsEiBfpPfVO9Q3bkL+OJw8Buc/gtBD6cy/+wlOv4+YOZSsZ+ikKqiW/K8PHmwWfVdebK7iWjZChZSA48PmMiRt3+P7jVtxhaRb4Nv2XWr9bb6OVjE6s0QIjiA4OmxJaXGr2+Bm5y8MKZE7m/zca2YL0Dv4SvP6YBsDngOqgKX/F4r8LvqcvPtLqstPBH9AoxTv9lvA2ViwAaVpPm1W+bi5nPIZ9kYmbASV3ZNKYYlsF1vacaVKe3wipmQqz+wK7IYkrTDrnBPzBdE+PsYIr+x0xoTHAh5tAaJcJrkyLHCKybHSN2IGhG0ni0o3IUzlIYr2Jw8w8hREi0t4ytSvLej3wA/AlCnefX6ng7rzJz4hOAehtp74Zh+C0QJ2TiywJh2s+VfByoGd4+nZJ6CRoib8Kz/AkTm80mF4fgH6XXhqjsrtOynu/xKg0Qo9zq9dx5IWwnVZ9lopzoOotja5sHKViABZKHJpq57iaPi+HxdHz1ZSs+PBpm7CGxMKrvGbFvBZanh8iGNP9sNkkp9mE6z8owLgX2zIA0l1aUwxAAAAAElFTkSuQmCC"
+		/>
+		<style>
+			:root {
+				--white-text: #ddd;
+			}
+			body {
+				color: var(--white-text);
+				background-color: #333;
+				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu',
+					'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+			}
+		</style>
+	</head>
+
+	<body>
+		<div id="archive">
+			<div class="fallback" style="visibility: hidden">
+				<p>If you see this, something is broken.</p>
+				<p>
+					Possibility #1: frequent file-writing into your folder was unstable. Make sure your folder
+					isn't located inside:
+				</p>
+				<ul>
+					<li>flash drives</li>
+					<li>cloud syncing folder (GoogleDrive, iCloud, etc)</li>
+					<li>
+						"Documents" and "Desktop" on MacOS (because you might have turned on syncing them to
+						iCloud. Google "MacOS toggle sync Desktop and Documents to iCloud")
+					</li>
+					<li>OneDrive tend to be fine, still be cautious though.</li>
+				</ul>
+
+				<br />
+				<p>
+					Possibility #2: a browser setting is blocking something in this page. You can try another
+					browser. Just drag "Archive.html" into other browsers to test, Chrome, Edge, Firefox,
+					Safari, or anything else, all can work.
+				</p>
+				<br />
+
+				<p>Possibility #3: a key file "app.js" is somehow missing.</p>
+				<ul>
+					<li>
+						In this scenario, the browser extension can still correctly download all the mp4 files,
+						but since "Archive.html" (this file) isn't working properly, the mp4 files are all named
+						with numbers, which aren't worth collecting.
+					</li>
+					<li>
+						This scenario was typically reported in April 2024, when Windows Defender removed
+						"app.js". Follow
+						<a
+							target="_blank"
+							style="color: lightskyblue"
+							href="https://myfavett.com/about_virus_alert"
+							target="_blank"
+							>https://myfavett.com/about_virus_alert</a
+						>
+						to fix.
+					</li>
+				</ul>
+				<br />
+				<p>
+					In any case, as long as you've been using myfaveTT for more than 1 day, you can always
+					restore the Archive to a previous day when it wasn't broken, by going to your folder >
+					data > .appData > backups, and follow instructions there. (note: on Mac, .appData could be
+					hidden, press Command+Shift+Dot to reveal)
+				</p>
+			</div>
+		</div>
+	</body>
+	<script>
+		setTimeout(() => {
+			document.querySelector('.fallback').style.visibility = 'visible';
+		}, 1e3);
+	</script>
+	<script src="data/.appdata/app.js"></script>
+</html>
