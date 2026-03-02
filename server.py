@@ -13,14 +13,18 @@ import threading
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel
 
 app = FastAPI()
 
-DATA_DIR = Path(__file__).parent / "data" / "Favorites" / "videos"
+CONFIG_FILE = Path(__file__).parent / "config.json"
 ARTIFACTS_DIR = Path(__file__).parent / "artifacts"
 INDEX_HTML = Path(__file__).parent / "index.html"
+SETUP_HTML = Path(__file__).parent / "setup.html"
+
+# Default — overridden by config.json at startup
+DATA_DIR = Path(__file__).parent / "data" / "Favorites" / "videos"
 
 # Loaded at startup
 predictions: dict[str, dict] = {}
@@ -30,9 +34,28 @@ FILENAME_RE = re.compile(r"^\d+\.mp4$")
 PROJECT_DIR = Path(__file__).parent
 
 
+def load_config():
+    global DATA_DIR
+    if CONFIG_FILE.exists():
+        try:
+            cfg = json.loads(CONFIG_FILE.read_text())
+            if "data_dir" in cfg:
+                DATA_DIR = Path(cfg["data_dir"])
+        except Exception:
+            pass
+
+
+def is_configured() -> bool:
+    return DATA_DIR.exists() and DATA_DIR.is_dir()
+
+
 class SortRequest(BaseModel):
     filename: str
     folder: str
+
+
+class SetupRequest(BaseModel):
+    data_dir: str
 
 
 def get_folders():
@@ -46,7 +69,12 @@ def get_folders():
 
 
 @app.on_event("startup")
-def load_predictions():
+def startup():
+    load_config()
+    _load_predictions()
+
+
+def _load_predictions():
     pred_file = ARTIFACTS_DIR / "predictions.json"
     if pred_file.exists():
         data = json.loads(pred_file.read_text())
@@ -56,12 +84,55 @@ def load_predictions():
 
 @app.get("/")
 def serve_index():
+    if not is_configured():
+        return RedirectResponse("/setup")
     return FileResponse(INDEX_HTML, media_type="text/html")
+
+
+@app.get("/setup")
+def serve_setup():
+    return FileResponse(SETUP_HTML, media_type="text/html")
+
+
+@app.post("/api/setup")
+def save_setup(req: SetupRequest):
+    path = Path(req.data_dir.strip().strip('"'))
+
+    if not path.exists():
+        raise HTTPException(400, "Path does not exist")
+    if not path.is_dir():
+        raise HTTPException(400, "Path is not a directory")
+
+    mp4_count = len(list(path.glob("*.mp4")))
+    folders = {
+        d.name: len(list((path / d.name).glob("*.mp4")))
+        for d in sorted(path.iterdir())
+        if d.is_dir()
+    }
+
+    CONFIG_FILE.write_text(json.dumps({"data_dir": str(path)}, indent=2))
+    load_config()
+
+    return {
+        "success": True,
+        "data_dir": str(path),
+        "unsorted_videos": mp4_count,
+        "folders": folders,
+    }
+
+
+@app.get("/api/config/status")
+def config_status():
+    return {
+        "configured": is_configured(),
+        "data_dir": str(DATA_DIR) if is_configured() else None,
+    }
 
 
 @app.get("/api/videos")
 def list_videos():
-    """List all unsorted videos (in root, not in any subfolder) with predictions."""
+    if not is_configured():
+        raise HTTPException(503, "Not configured — visit /setup first")
     videos = []
     for f in sorted(DATA_DIR.glob("*.mp4")):
         if f.is_file():
@@ -77,12 +148,16 @@ def list_videos():
 
 @app.get("/api/folders")
 def list_folders():
+    if not is_configured():
+        raise HTTPException(503, "Not configured — visit /setup first")
     return {"folders": get_folders()}
 
 
 @app.post("/api/sort")
 def sort_video(req: SortRequest):
-    # Validate filename
+    if not is_configured():
+        raise HTTPException(503, "Not configured — visit /setup first")
+
     if not FILENAME_RE.match(req.filename):
         raise HTTPException(400, "Invalid filename")
 
@@ -90,12 +165,10 @@ def sort_video(req: SortRequest):
     if not src.exists() or not src.is_file():
         raise HTTPException(404, "Video not found (may already be sorted)")
 
-    # Validate folder
     dst_dir = DATA_DIR / req.folder
     if not dst_dir.exists() or not dst_dir.is_dir():
         raise HTTPException(400, f"Unknown folder: {req.folder}")
 
-    # Prevent path traversal
     if ".." in req.folder or "/" in req.folder:
         raise HTTPException(400, "Invalid folder name")
 
@@ -129,9 +202,8 @@ def _run_retrain():
                 retrain_status["running"] = False
                 return
 
-        # Reload predictions
         predictions.clear()
-        load_predictions()
+        _load_predictions()
         retrain_status["last_result"] = "success"
     except Exception as e:
         retrain_status["last_result"] = f"Error: {str(e)}"
@@ -158,13 +230,13 @@ def retrain_progress():
 
 @app.get("/videos/{filename}")
 def serve_video(filename: str):
+    if not is_configured():
+        raise HTTPException(503, "Not configured — visit /setup first")
     if not FILENAME_RE.match(filename):
         raise HTTPException(400, "Invalid filename")
 
-    # Check root first, then subfolders (for prev/review)
     path = DATA_DIR / filename
     if not path.exists():
-        # Search subfolders
         for sub in DATA_DIR.iterdir():
             if sub.is_dir():
                 candidate = sub / filename

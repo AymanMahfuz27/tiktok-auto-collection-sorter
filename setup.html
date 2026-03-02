@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TikTok Sorter — Setup</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #0a0a0a;
+      color: #e0e0e0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      background: #141414;
+      border: 1px solid #242424;
+      border-radius: 20px;
+      padding: 40px 44px;
+      max-width: 580px;
+      width: 100%;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      background: #fe2c55;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+    .brand-name {
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: -0.3px;
+    }
+    .brand-sub {
+      font-size: 12px;
+      color: #555;
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      color: #666;
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    .step {
+      margin-bottom: 20px;
+    }
+
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .step-dot {
+      width: 22px;
+      height: 22px;
+      background: #fe2c55;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .step-dot.done {
+      background: #22c55e;
+    }
+    .step-title {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .step-body {
+      padding-left: 32px;
+    }
+    .step-body p {
+      color: #777;
+      font-size: 13px;
+      line-height: 1.65;
+      margin-bottom: 10px;
+    }
+
+    code {
+      background: #1e1e1e;
+      padding: 2px 7px;
+      border-radius: 5px;
+      font-family: 'Consolas', 'Menlo', monospace;
+      font-size: 11.5px;
+      color: #ccc;
+    }
+
+    .callout {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 12.5px;
+      color: #888;
+      line-height: 1.6;
+      margin-bottom: 10px;
+    }
+    .callout strong { color: #bbb; }
+
+    .path-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      min-width: 0;
+      background: #1a1a1a;
+      border: 1.5px solid #2e2e2e;
+      border-radius: 10px;
+      padding: 11px 14px;
+      color: #e0e0e0;
+      font-size: 13px;
+      font-family: 'Consolas', 'Menlo', monospace;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input[type="text"]:focus { border-color: #444; }
+    input[type="text"].state-valid   { border-color: #22c55e; }
+    input[type="text"].state-invalid { border-color: #ef4444; }
+
+    .btn {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      white-space: nowrap;
+      transition: opacity 0.15s, transform 0.1s;
+      flex-shrink: 0;
+    }
+    .btn:hover:not(:disabled) { opacity: 0.85; }
+    .btn:active:not(:disabled) { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-ghost   { background: #242424; color: #ccc; }
+    .btn-primary { background: #fe2c55; color: #fff; }
+    .btn-success { background: #22c55e; color: #fff; }
+
+    .hint {
+      font-size: 11.5px;
+      color: #555;
+      line-height: 1.5;
+    }
+
+    /* Error message */
+    .error-msg {
+      font-size: 12px;
+      color: #ef4444;
+      margin-top: 6px;
+      display: none;
+    }
+    .error-msg.show { display: block; }
+
+    /* Preview card */
+    .preview {
+      background: #111;
+      border: 1.5px solid #1f3a1f;
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 14px;
+      display: none;
+    }
+    .preview.show { display: block; }
+
+    .preview-header {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #22c55e;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      font-size: 13px;
+      color: #999;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-val { color: #e0e0e0; font-weight: 500; }
+
+    .folder-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 8px;
+    }
+    .chip {
+      background: #1e1e1e;
+      border: 1px solid #2a2a2a;
+      border-radius: 6px;
+      padding: 3px 9px;
+      font-size: 11.5px;
+      color: #bbb;
+    }
+    .chip-count {
+      color: #555;
+      margin-left: 3px;
+    }
+
+    .warn-box {
+      background: #1a1500;
+      border: 1px solid #3a2f00;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 12.5px;
+      color: #a89060;
+      line-height: 1.6;
+      margin-top: 10px;
+    }
+
+    /* Divider */
+    .divider {
+      border: none;
+      border-top: 1px solid #1e1e1e;
+      margin: 28px 0;
+    }
+
+    /* CTA button */
+    .cta {
+      width: 100%;
+      padding: 14px;
+      font-size: 15px;
+      border-radius: 12px;
+      display: none;
+    }
+    .cta.show { display: block; }
+  </style>
+</head>
+<body>
+  <div class="card">
+
+    <div class="brand">
+      <div class="brand-icon">🎵</div>
+      <div>
+        <div class="brand-name">TikTok Auto-Sorter</div>
+        <div class="brand-sub">Local ML • Setup</div>
+      </div>
+    </div>
+
+    <h1>Let's get set up</h1>
+    <p class="subtitle">
+      Point this tool at your TikTok videos folder and it'll learn to sort them automatically.
+    </p>
+
+    <!-- Step 1 -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-dot" id="dot1">1</div>
+        <span class="step-title">Export your TikTok data <span style="color:#555;font-weight:400;font-size:12px;">— skip if you already have the files</span></span>
+      </div>
+      <div class="step-body">
+        <p>
+          In TikTok: <strong style="color:#ccc">Profile → ☰ → Settings → Privacy →
+          Personalization and data → Download your data</strong>.<br>
+          Choose <strong style="color:#ccc">Video</strong> format, then extract the downloaded zip.
+        </p>
+        <div class="callout">
+          <strong>What you'll get:</strong> A folder called something like
+          <code>TikTok Data</code> containing <code>Favorites/videos/</code> with your saved
+          <code>.mp4</code> files.
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-dot" id="dot2">2</div>
+        <span class="step-title">Point to your videos folder</span>
+      </div>
+      <div class="step-body">
+        <p>
+          Paste the full path to the folder that contains your <code>.mp4</code> files.
+          Subfolders become your sort categories.
+        </p>
+
+        <div class="path-row">
+          <input
+            type="text"
+            id="pathInput"
+            placeholder="C:\Users\you\Downloads\TikTok Data\Favorites\videos"
+          />
+          <button class="btn btn-ghost" id="checkBtn" onclick="checkPath()">Check</button>
+        </div>
+
+        <div class="error-msg" id="errorMsg"></div>
+
+        <div class="hint">
+          💡 <strong style="color:#777">Windows:</strong> open the folder in Explorer, click the address bar, copy the path.<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<strong style="color:#777">Mac:</strong> right-click the folder → Get Info → copy the "Where" path, or drag the folder here.
+        </div>
+
+        <div class="preview" id="preview">
+          <div class="preview-header">
+            <span>✓</span> Folder found
+          </div>
+          <div id="previewStats"></div>
+        </div>
+
+        <div class="warn-box" id="warnBox" style="display:none"></div>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <button class="btn btn-success cta" id="ctaBtn" onclick="startSorting()">
+      Start Sorting →
+    </button>
+
+  </div>
+
+  <script>
+    let savedPath = null;
+
+    async function checkPath() {
+      const raw = document.getElementById('pathInput').value.trim();
+      if (!raw) return;
+
+      const checkBtn  = document.getElementById('checkBtn');
+      const pathInput = document.getElementById('pathInput');
+      const errorMsg  = document.getElementById('errorMsg');
+      const preview   = document.getElementById('preview');
+      const warnBox   = document.getElementById('warnBox');
+      const ctaBtn    = document.getElementById('ctaBtn');
+
+      // Reset state
+      checkBtn.textContent = '…';
+      checkBtn.disabled = true;
+      errorMsg.classList.remove('show');
+      preview.classList.remove('show');
+      warnBox.style.display = 'none';
+      ctaBtn.classList.remove('show');
+      pathInput.classList.remove('state-valid', 'state-invalid');
+
+      try {
+        const res  = await fetch('/api/setup', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ data_dir: raw }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          pathInput.classList.add('state-invalid');
+          errorMsg.textContent = data.detail || 'That path doesn\'t seem right.';
+          errorMsg.classList.add('show');
+          savedPath = null;
+        } else {
+          pathInput.classList.add('state-valid');
+          savedPath = raw;
+          document.getElementById('dot2').classList.add('done');
+
+          // Build preview
+          const folders    = data.folders;           // { name: count }
+          const folderKeys = Object.keys(folders);
+          const totalSorted = folderKeys.reduce((s, k) => s + folders[k], 0);
+
+          let statsHtml = `
+            <div class="stat-row">
+              <span>Unsorted videos</span>
+              <span class="stat-val">${data.unsorted_videos}</span>
+            </div>
+            <div class="stat-row">
+              <span>Existing sort folders</span>
+              <span class="stat-val">${folderKeys.length}</span>
+            </div>`;
+
+          if (folderKeys.length > 0) {
+            statsHtml += `
+            <div class="stat-row">
+              <span>Already sorted</span>
+              <span class="stat-val">${totalSorted} videos</span>
+            </div>
+            <div class="folder-chips">`;
+            folderKeys.forEach(name => {
+              statsHtml += `<div class="chip">📁 ${name}<span class="chip-count">${folders[name]}</span></div>`;
+            });
+            statsHtml += `</div>`;
+          }
+
+          document.getElementById('previewStats').innerHTML = statsHtml;
+          preview.classList.add('show');
+
+          // Warn if nothing to sort
+          if (data.unsorted_videos === 0 && folderKeys.length === 0) {
+            warnBox.textContent = '⚠ No .mp4 files found in this folder. Make sure you\'re pointing at the right directory.';
+            warnBox.style.display = 'block';
+          } else if (data.unsorted_videos === 0) {
+            warnBox.textContent = '⚠ No unsorted videos found — all .mp4 files are already in subfolders. You can still open the app to review them.';
+            warnBox.style.display = 'block';
+          } else if (folderKeys.length === 0) {
+            warnBox.innerHTML = '⚠ No sort folders yet. Create subfolders inside this directory (e.g. <code>cooking</code>, <code>music</code>) — they\'ll become your categories.';
+            warnBox.style.display = 'block';
+          }
+
+          ctaBtn.classList.add('show');
+        }
+      } catch (e) {
+        errorMsg.textContent = 'Could not reach the server.';
+        errorMsg.classList.add('show');
+        savedPath = null;
+      }
+
+      checkBtn.textContent = 'Check';
+      checkBtn.disabled = false;
+    }
+
+    function startSorting() {
+      if (!savedPath) return;
+      window.location.href = '/';
+    }
+
+    // Enter key in input triggers check
+    document.getElementById('pathInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') checkPath();
+    });
+  </script>
+</body>
+</html>
