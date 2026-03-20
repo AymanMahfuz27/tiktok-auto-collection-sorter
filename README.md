@@ -1,7 +1,7 @@
 # TikTok Video Auto-Sorter
 
 A multimodal machine learning system that automatically categorizes TikTok videos into user-defined folders by analyzing visual and audio content. Achieves **~90% accuracy** on personal video collections using transfer learning from foundation models.
-
+In depth read: https://aymanmahfuz27-tiktok-auto-collection-sorter.mintlify.app/concepts/architecture
 ## Problem & Solution
 
 TikTok's folder organization requires three taps (save → view folders → select folder), creating enough friction that most users abandon the feature. This project solves that by predicting the correct folder at save time, reducing the flow to a single confirmation tap.
